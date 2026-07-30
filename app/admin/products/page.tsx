@@ -1,0 +1,477 @@
+import Link from "next/link";
+import { prisma } from "@/app/lib/prisma";
+import { toggleProductStatus } from "@/app/actions/product";
+
+
+export default async function ProductsPage() {
+
+
+  const products = await prisma.product.findMany({
+
+    include: {
+
+      category: true,
+
+    },
+
+
+    orderBy: [
+
+      {
+        sortOrder: "asc",
+      },
+
+      {
+        name: "asc",
+      },
+
+    ],
+
+  });
+
+
+
+
+
+  async function reorderProduct(formData: FormData) {
+
+    "use server";
+
+
+    const productId = formData.get("productId") as string;
+
+    const direction = formData.get("direction") as "up" | "down";
+
+
+
+    await fetch(
+      `${process.env.NEXT_PUBLIC_URL || "http://localhost:3000"}/api/products/reorder`,
+      {
+
+        method: "POST",
+
+        headers: {
+
+          "Content-Type": "application/json",
+
+        },
+
+
+        body: JSON.stringify({
+
+          productId,
+
+          direction,
+
+        }),
+
+      }
+
+    );
+
+
+  }
+
+
+
+
+
+  return (
+
+
+    <main className="min-h-screen bg-gray-100 p-8">
+
+
+      <div className="max-w-7xl mx-auto">
+
+
+
+        <div className="flex justify-between items-center mb-8">
+
+
+          <h1 className="text-3xl font-bold">
+
+            Ürün Yönetimi
+
+          </h1>
+
+
+
+          <Link
+
+            href="/admin/products/new"
+
+            className="bg-black text-white px-5 py-3 rounded-lg"
+
+          >
+
+            + Yeni Ürün
+
+          </Link>
+
+
+        </div>
+
+
+
+
+
+        <div className="bg-white rounded-xl shadow overflow-hidden">
+
+
+          <table className="w-full">
+
+
+            <thead className="bg-gray-200">
+
+
+              <tr>
+
+
+                <th className="text-left p-4">
+                  Fotoğraf
+                </th>
+
+
+                <th className="text-left p-4">
+                  Sıra
+                </th>
+
+
+                <th className="text-left p-4">
+                  Ürün
+                </th>
+
+
+                <th className="text-left p-4">
+                  Kategori
+                </th>
+
+
+                <th className="text-left p-4">
+                  Fiyat
+                </th>
+
+
+                <th className="text-left p-4">
+                  Durum
+                </th>
+
+
+                <th className="text-left p-4">
+                  İşlem
+                </th>
+
+
+              </tr>
+
+
+            </thead>
+
+
+
+
+
+            <tbody>
+
+
+              {products.map((product)=>(
+
+
+                <tr
+
+                  key={product.id}
+
+                  className="border-t"
+
+                >
+
+
+
+
+                  <td className="p-4">
+
+
+                    {product.image ? (
+
+                      <img
+
+                        src={product.image}
+
+                        alt={product.name}
+
+                        className="w-16 h-16 rounded-lg object-cover"
+
+                      />
+
+                    ) : (
+
+                      <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center text-xs">
+
+                        Yok
+
+                      </div>
+
+                    )}
+
+
+                  </td>
+
+
+
+
+
+
+                  <td className="p-4">
+
+                    {product.sortOrder}
+
+                  </td>
+
+
+
+
+
+
+                  <td className="p-4 font-semibold">
+
+                    {product.name}
+
+                  </td>
+
+
+
+
+
+
+                  <td className="p-4">
+
+                    {product.category.name}
+
+                  </td>
+
+
+
+
+
+
+                  <td className="p-4">
+
+                    {product.price} TL
+
+                  </td>
+
+
+
+
+
+
+                  <td className="p-4">
+
+
+                    <span
+
+                      className={
+
+                        product.active
+
+                        ? "text-green-600 font-semibold"
+
+                        : "text-red-600 font-semibold"
+
+                      }
+
+                    >
+
+                      {product.active ? "Aktif" : "Pasif"}
+
+
+                    </span>
+
+
+                  </td>
+
+
+
+
+
+
+
+                  <td className="p-4 flex gap-2 flex-wrap">
+
+
+
+
+
+                    <form action={reorderProduct}>
+
+
+                      <input
+
+                        type="hidden"
+
+                        name="productId"
+
+                        value={product.id}
+
+                      />
+
+
+                      <input
+
+                        type="hidden"
+
+                        name="direction"
+
+                        value="up"
+
+                      />
+
+
+                      <button
+
+                        className="bg-green-600 text-white px-3 py-2 rounded"
+
+                      >
+
+                        ↑
+
+                      </button>
+
+
+                    </form>
+
+
+
+
+
+
+                    <form action={reorderProduct}>
+
+
+                      <input
+
+                        type="hidden"
+
+                        name="productId"
+
+                        value={product.id}
+
+                      />
+
+
+                      <input
+
+                        type="hidden"
+
+                        name="direction"
+
+                        value="down"
+
+                      />
+
+
+                      <button
+
+                        className="bg-orange-500 text-white px-3 py-2 rounded"
+
+                      >
+
+                        ↓
+
+                      </button>
+
+
+                    </form>
+
+
+
+
+
+
+
+                    <Link
+
+                      href={`/admin/products/edit/${product.id}`}
+
+                      className="bg-blue-600 text-white px-3 py-2 rounded"
+
+                    >
+
+                      Düzenle
+
+                    </Link>
+
+
+
+
+
+
+
+                    <form action={toggleProductStatus}>
+
+
+                      <input
+
+                        type="hidden"
+
+                        name="id"
+
+                        value={product.id}
+
+                      />
+
+
+
+                      <button
+
+                        className="bg-gray-700 text-white px-3 py-2 rounded"
+
+                      >
+
+                        {product.active ? "Pasif Yap" : "Aktif Yap"}
+
+
+                      </button>
+
+
+                    </form>
+
+
+
+
+
+                  </td>
+
+
+
+
+                </tr>
+
+
+              ))}
+
+
+            </tbody>
+
+
+
+          </table>
+
+
+
+        </div>
+
+
+
+      </div>
+
+
+
+    </main>
+
+
+  );
+
+
+}
