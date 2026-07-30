@@ -7,7 +7,6 @@ export default async function Home() {
   const settings = await prisma.setting.findFirst();
 
 
-
   const categories = await prisma.category.findMany({
 
     where: {
@@ -45,15 +44,11 @@ export default async function Home() {
         orderBy: [
 
           {
-
             sortOrder: "asc",
-
           },
 
           {
-
             name: "asc",
-
           },
 
         ],
@@ -106,7 +101,7 @@ export default async function Home() {
 
           {settings?.slogan && (
 
-            <p className="text-[#806b5a] mt-2">
+            <p className="text-[#5f4b3d] mt-2 font-medium">
 
               {settings.slogan}
 
@@ -116,9 +111,6 @@ export default async function Home() {
 
 
         </header>
-
-
-
 
 
 
@@ -139,7 +131,7 @@ export default async function Home() {
 
                 href={`#${category.id}`}
 
-                className="bg-white border border-[#ded3c8] rounded-full px-4 py-2 text-sm whitespace-nowrap shadow-sm"
+                className="bg-white border border-[#cdbfaf] rounded-full px-4 py-2 text-sm whitespace-nowrap shadow-sm text-[#2b1b12] font-semibold"
 
               >
 
@@ -155,8 +147,6 @@ export default async function Home() {
 
 
         </div>
-
-
 
 
 
@@ -184,8 +174,6 @@ export default async function Home() {
               {category.name}
 
             </h2>
-
-
 
 
 
@@ -258,11 +246,13 @@ export default async function Home() {
                     <div className="flex justify-between gap-4">
 
 
+
                       <h3 className="font-bold text-lg text-[#2b1b12]">
 
                         {product.name}
 
                       </h3>
+
 
 
 
@@ -284,9 +274,10 @@ export default async function Home() {
 
 
 
+
                     {product.description && (
 
-                      <p className="text-sm text-[#806b5a] mt-3 leading-relaxed">
+                      <p className="text-sm text-[#5f4b3d] mt-3 leading-relaxed">
 
                         {product.description}
 
