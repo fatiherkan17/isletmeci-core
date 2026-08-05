@@ -1,57 +1,170 @@
 import { NextResponse } from "next/server";
-import { writeFile } from "fs/promises";
-import path from "path";
+import { createClient } from "@supabase/supabase-js";
+
+
+const supabase = createClient(
+
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+
+);
+
 
 
 export async function POST(request: Request) {
 
 
-  const formData = await request.formData();
+  try {
 
 
-  const file = formData.get("file") as File;
+    const formData = await request.formData();
+
+
+    const file = formData.get("file") as File;
 
 
 
-  if (!file) {
+    if (!file) {
 
-    return NextResponse.json(
-      { error: "Dosya bulunamadı" },
-      { status: 400 }
-    );
+
+      return NextResponse.json(
+
+        {
+          error: "Dosya bulunamadı"
+        },
+
+        {
+          status:400
+        }
+
+      );
+
+
+    }
+
+
+
+
+
+    const bytes = await file.arrayBuffer();
+
+
+    const buffer = Buffer.from(bytes);
+
+
+
+
+
+    const fileName =
+
+      `${Date.now()}-${file.name.replace(/\s/g,"-")}`;
+
+
+
+
+
+
+
+    const { error } = await supabase.storage
+
+      .from("product-images")
+
+      .upload(
+
+        fileName,
+
+        buffer,
+
+        {
+
+          contentType:file.type,
+
+          upsert:false
+
+        }
+
+      );
+
+
+
+
+
+
+    if(error){
+
+
+      console.error(error);
+
+
+      return NextResponse.json(
+
+        {
+          error:"Fotoğraf yüklenemedi"
+        },
+
+        {
+          status:500
+        }
+
+      );
+
+
+    }
+
+
+
+
+
+
+
+    const { data } = supabase.storage
+
+      .from("product-images")
+
+      .getPublicUrl(fileName);
+
+
+
+
+
+
+
+
+    return NextResponse.json({
+
+      url:data.publicUrl
+
+    });
+
+
+
+
 
   }
 
-
-
-  const bytes = await file.arrayBuffer();
-
-  const buffer = Buffer.from(bytes);
+  catch(error){
 
 
 
-  const fileName =
-    Date.now() + "-" + file.name;
+    console.error(error);
 
 
 
-  const uploadPath = path.join(
-    process.cwd(),
-    "public/uploads",
-    fileName
-  );
+    return NextResponse.json(
+
+      {
+        error:"Sunucu hatası"
+      },
+
+      {
+        status:500
+      }
+
+    );
 
 
-
-  await writeFile(uploadPath, buffer);
-
-
-
-  return NextResponse.json({
-
-    url: `/uploads/${fileName}`
-
-  });
+  }
 
 
 }

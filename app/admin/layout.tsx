@@ -1,11 +1,32 @@
 import Link from "next/link";
+import { getSession } from "@/app/lib/auth";
+import { redirect } from "next/navigation";
 
 
-export default function AdminLayout({
+export default async function AdminLayout({
+
   children,
+
 }: {
+
   children: React.ReactNode;
+
 }) {
+
+
+  const session = await getSession();
+
+
+  if (!session) {
+
+    redirect("/login");
+
+  }
+
+
+  const userEmail = session.email as string;
+  const userRole = session.role as string;
+
 
 
   return (
@@ -16,9 +37,47 @@ export default function AdminLayout({
       <aside className="w-64 bg-black text-white p-6 hidden md:block">
 
 
-        <h1 className="text-2xl font-bold mb-10">
+        <h1 className="text-2xl font-bold mb-4">
           NONNA
         </h1>
+
+
+
+        <div className="mb-8 text-sm text-gray-300">
+
+
+          <div>
+            👤 {userEmail}
+          </div>
+
+
+          <div className="mt-1 text-green-400">
+            🔑 {userRole}
+          </div>
+
+
+
+          <form action="/api/auth/logout" method="POST">
+
+
+            <button
+
+              type="submit"
+
+              className="mt-4 w-full bg-red-600 hover:bg-red-700 text-white rounded px-3 py-2 text-sm"
+
+            >
+
+              🚪 Çıkış Yap
+
+            </button>
+
+
+          </form>
+
+
+        </div>
+
 
 
 
@@ -29,7 +88,6 @@ export default function AdminLayout({
 
 
           <div>
-
 
             <p className="text-gray-400 text-sm mb-2">
               YÖNETİM
@@ -57,9 +115,7 @@ export default function AdminLayout({
 
 
 
-
           <div>
-
 
             <p className="text-gray-400 text-sm mb-2">
               MENÜ YÖNETİMİ
@@ -82,6 +138,7 @@ export default function AdminLayout({
 
 
 
+
             <Link
 
               href="/admin/categories"
@@ -93,7 +150,6 @@ export default function AdminLayout({
               📂 Kategoriler
 
             </Link>
-
 
 
 
@@ -116,6 +172,7 @@ export default function AdminLayout({
 
 
 
+
             <Link
 
               href="/admin/settings"
@@ -130,7 +187,35 @@ export default function AdminLayout({
 
 
 
+            {
+
+
+            userRole === "OWNER" && (
+
+
+              <Link
+
+                href="/admin/users"
+
+                className="block p-3 rounded hover:bg-gray-800"
+
+              >
+
+                👥 Personel
+
+              </Link>
+
+
+            )
+
+
+            }
+
+
+
           </div>
+
+
 
 
 
@@ -149,31 +234,27 @@ export default function AdminLayout({
 
 
 
-            <div className="text-gray-500 p-3">
 
+            <div className="text-gray-500 p-3">
               🧾 Sipariş
-
             </div>
 
 
-            <div className="text-gray-500 p-3">
 
+            <div className="text-gray-500 p-3">
               📦 Stok
-
             </div>
 
 
-            <div className="text-gray-500 p-3">
 
+            <div className="text-gray-500 p-3">
               💰 Kasa
-
             </div>
 
 
+
             <div className="text-gray-500 p-3">
-
               👥 Personel
-
             </div>
 
 
@@ -184,12 +265,13 @@ export default function AdminLayout({
 
 
 
+
+
         </nav>
 
 
 
       </aside>
-
 
 
 
@@ -213,5 +295,6 @@ export default function AdminLayout({
     </div>
 
   );
+
 
 }

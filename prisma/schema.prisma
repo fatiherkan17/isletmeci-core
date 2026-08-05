@@ -2,138 +2,87 @@ generator client {
   provider = "prisma-client-js"
 }
 
-
 datasource db {
-  provider = "sqlite"
-  url = "file:./dev.db"
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
-
-
 
 model Category {
-
-  id String @id @default(cuid())
-
-  name String
-
-  active Boolean @default(true)
-
-  sortOrder Int @default(0)
-
-  icon String?
-
-  products Product[]
-
+  id        String    @id @default(cuid())
+  name      String
+  active    Boolean   @default(true)
+  sortOrder Int       @default(0)
+  icon      String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  products  Product[]
 }
-
-
 
 model Product {
-
-  id String @id @default(cuid())
-
-  name String
-
+  id          String   @id @default(cuid())
+  name        String
   description String?
-
-  price Float
-
-  image String?
-
-  active Boolean @default(true)
-
-  available Boolean @default(true)
-
-  featured Boolean @default(false)
-
-  sortOrder Int @default(0)
-
-  categoryId String
-
-  category Category @relation(fields: [categoryId], references: [id])
-
-
-  recipes RecipeItem[]
-
-
-  createdAt DateTime @default(now())
-
-  updatedAt DateTime @default(now())
-
+  price       Float
+  image       String?
+  active      Boolean  @default(true)
+  available   Boolean  @default(true)
+  featured    Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  categoryId  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  category    Category @relation(fields: [categoryId], references: [id])
 }
-
-
-
-
-
-model Ingredient {
-
-  id String @id @default(cuid())
-
-
-  name String
-
-
-  unit String
-
-
-  stock Float @default(0)
-
-
-  recipes RecipeItem[]
-
-
-  createdAt DateTime @default(now())
-
-
-  updatedAt DateTime @default(now())
-
-}
-
-
-
-
-
-model RecipeItem {
-
-  id String @id @default(cuid())
-
-
-  quantity Float
-
-
-  productId String
-
-
-  ingredientId String
-
-
-
-  product Product @relation(fields: [productId], references: [id])
-
-
-  ingredient Ingredient @relation(fields: [ingredientId], references: [id])
-
-}
-
-
 
 model Setting {
-
-  id String @id @default(cuid())
-
+  id           String   @id @default(cuid())
   businessName String
-
-  slogan String?
-
-  logo String?
-
-  phone String?
-
-  address String?
-
-  instagram String?
-
+  slogan       String?
+  logo         String?
+  phone        String?
+  address      String?
+  instagram    String?
   workingHours String?
+  createdAt    DateTime @default(now())
+  menuUrl      String?
+  updatedAt    DateTime @updatedAt
+}
 
+model User {
+  id           String           @id @default(cuid())
+  name         String
+  email        String           @unique
+  passwordHash String
+  role         UserRole         @default(STAFF)
+  active       Boolean          @default(true)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  permissions  UserPermission[]
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  key         String           @unique
+  name        String
+  createdAt   DateTime         @default(now())
+  description String?
+  users       UserPermission[]
+}
+
+model UserPermission {
+  id           String     @id @default(cuid())
+  userId       String
+  permissionId String
+  createdAt    DateTime   @default(now())
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, permissionId])
+}
+
+enum UserRole {
+  OWNER
+  MANAGER
+  STAFF
 }
