@@ -21,13 +21,11 @@ export default async function MenuPage(){
     },
 
 
-
     include:{
 
       category:true,
 
     },
-
 
 
     orderBy:[
@@ -58,7 +56,6 @@ export default async function MenuPage(){
 
 
 
-
   const categories = Array.from(
 
 
@@ -81,12 +78,11 @@ export default async function MenuPage(){
 
 
 
-
   return (
 
 
 
-    <main className="min-h-screen bg-white p-6">
+    <main className="min-h-screen bg-white text-black p-6">
 
 
 
@@ -94,14 +90,13 @@ export default async function MenuPage(){
 
 
 
-        <h1 className="text-4xl font-bold text-center mb-8">
 
+
+        <h1 className="text-4xl font-bold text-center mb-8 text-black">
 
           NONNA
 
-
         </h1>
-
 
 
 
@@ -127,7 +122,7 @@ export default async function MenuPage(){
 
 
 
-              <h2 className="text-2xl font-bold mb-4">
+              <h2 className="text-2xl font-bold mb-4 text-black">
 
 
                 {category}
@@ -153,18 +148,13 @@ export default async function MenuPage(){
 
                   products
 
-
                   .filter(
 
                     p => p.category.name === category
 
                   )
 
-
                   .map(product => (
-
-
-
 
 
 
@@ -174,7 +164,7 @@ export default async function MenuPage(){
                       key={product.id}
 
 
-                      className="flex gap-4 border rounded-xl p-4"
+                      className="flex gap-4 border rounded-xl p-4 text-black"
 
 
                     >
@@ -223,13 +213,14 @@ export default async function MenuPage(){
 
 
 
-                        <h3 className="font-bold text-lg">
+                        <h3 className="font-bold text-lg text-black">
 
 
                           {product.name}
 
 
                         </h3>
+
 
 
 
@@ -245,7 +236,7 @@ export default async function MenuPage(){
 
 
 
-                          <p className="text-gray-500 text-sm">
+                          <p className="text-gray-600 text-sm">
 
 
                             {product.description}
@@ -272,7 +263,7 @@ export default async function MenuPage(){
 
 
 
-                      <div className="font-bold">
+                      <div className="font-bold text-black">
 
 
                         {product.price} TL
