@@ -1,173 +1,189 @@
 export const dynamic = "force-dynamic";
 
-
 import { prisma } from "@/app/lib/prisma";
+import Link from "next/link";
 
 
-
-export default async function MenuPage(){
-
+export default async function MenuPage() {
 
 
-  const products = await prisma.product.findMany({
+  const tables = await prisma.table.findMany({
 
+    where: {
 
-    where:{
-
-      active:true,
-
-      available:true,
+      active: true,
 
     },
 
+    orderBy: {
 
-    include:{
-
-      category:true,
+      number: "asc",
 
     },
-
-
-    orderBy:[
-
-      {
-
-        category:{
-
-          name:"asc",
-
-        },
-
-      },
-
-      {
-
-        sortOrder:"asc",
-
-      },
-
-    ],
-
 
   });
 
 
 
-
-
-
-  const categories = Array.from(
-
-
-    new Set(
-
-      products.map(
-
-        p => p.category.name
-
-      )
-
-    )
-
-
-  );
-
-
-
+  const setting = await prisma.setting.findFirst();
 
 
 
 
   return (
 
+    <main className="
+      min-h-screen
+      bg-[#F8F3EA]
+      text-[#1F2A1F]
+      p-5
+    ">
 
 
-    <main className="min-h-screen bg-white text-black p-6">
 
+      <div className="
+        max-w-md
+        mx-auto
+      ">
 
 
-      <div className="max-w-4xl mx-auto">
 
 
 
+        {/* HEADER */}
 
 
-        <h1 className="text-4xl font-bold text-center mb-8 text-black">
+        <section className="
+          text-center
+          pt-8
+          pb-6
+        ">
 
-          NONNA
 
-        </h1>
+          {
+            setting?.logo && (
 
+              <img
 
+                src={setting.logo}
 
+                alt="NONNA"
 
+                className="
+                  w-32
+                  h-32
+                  mx-auto
+                  rounded-full
+                  object-cover
+                  border-4
+                  border-[#C9A227]
+                  shadow-lg
+                  mb-5
+                "
 
+              />
 
+            )
+          }
 
-        {
 
-          categories.map((category)=>(
 
 
 
-            <section
+          <h1 className="
+            text-5xl
+            font-bold
+            tracking-wide
+          ">
 
-              key={category}
 
-              className="mb-10"
+            {
+              setting?.businessName
+              ??
+              "NONNA"
+            }
 
-            >
 
+          </h1>
 
 
 
 
-              <h2 className="text-2xl font-bold mb-4 text-black">
 
+          <p className="
+            mt-3
+            text-[#C65D3A]
+            text-lg
+            font-medium
+          ">
 
-                {category}
 
+            {
+              setting?.slogan
+              ??
+              "Authentic Italian Kitchen"
+            }
 
-              </h2>
 
+          </p>
 
 
 
 
 
+          {
+            setting?.address && (
 
+              <p className="
+                mt-3
+                text-sm
+                text-gray-600
+              ">
 
+                📍 {setting.address}
 
-              <div className="grid gap-4">
+              </p>
 
+            )
+          }
 
 
 
 
-                {
 
-                  products
+          <div className="
+            mt-5
+            bg-white
+            rounded-2xl
+            p-4
+            border
+            border-[#E8DCC8]
+            shadow-sm
+          ">
 
-                  .filter(
 
-                    p => p.category.name === category
+            <p className="
+              text-sm
+              leading-relaxed
+              text-gray-600
+            ">
 
-                  )
 
-                  .map(product => (
+              İtalyan mutfağının sıcaklığı,
+              <br/>
+              Çanakkale Kordon'un eşsiz atmosferiyle buluşuyor.
 
 
+            </p>
 
-                    <div
 
+          </div>
 
-                      key={product.id}
 
 
-                      className="flex gap-4 border rounded-xl p-4 text-black"
 
+        </section>
 
-                    >
 
 
 
@@ -175,140 +191,456 @@ export default async function MenuPage(){
 
 
 
-                      {
+        {/* BRAND CARDS */}
 
 
-                        product.image &&
 
+        <div className="
+          grid
+          grid-cols-3
+          gap-3
+          mb-8
+        ">
 
 
-                        <img
+          <div className="
+            bg-white
+            rounded-2xl
+            p-4
+            text-center
+            border
+            border-[#E8DCC8]
+          ">
 
 
-                          src={product.image}
+            <div className="text-3xl">
 
+              🍕
 
-                          alt={product.name}
+            </div>
 
 
-                          className="w-24 h-24 rounded-lg object-cover"
+            <p className="
+              text-xs
+              mt-2
+              font-bold
+            ">
 
+              Napoli Pizza
 
-                        />
+            </p>
 
 
-                      }
+          </div>
 
 
 
 
 
 
+          <div className="
+            bg-white
+            rounded-2xl
+            p-4
+            text-center
+            border
+            border-[#E8DCC8]
+          ">
 
 
+            <div className="text-3xl">
 
-                      <div className="flex-1">
+              ☕
 
+            </div>
 
 
+            <p className="
+              text-xs
+              mt-2
+              font-bold
+            ">
 
+              Özel Kahve
 
-                        <h3 className="font-bold text-lg text-black">
+            </p>
 
 
-                          {product.name}
+          </div>
 
 
-                        </h3>
 
 
 
 
+          <div className="
+            bg-white
+            rounded-2xl
+            p-4
+            text-center
+            border
+            border-[#E8DCC8]
+          ">
 
 
+            <div className="text-3xl">
 
+              🥐
 
-                        {
+            </div>
 
 
-                          product.description &&
+            <p className="
+              text-xs
+              mt-2
+              font-bold
+            ">
 
+              Kahvaltı
 
+            </p>
 
 
-                          <p className="text-gray-600 text-sm">
+          </div>
 
 
-                            {product.description}
+        </div>
 
 
-                          </p>
 
 
 
-                        }
 
 
 
 
+        {/* INFO CARDS */}
 
 
-                      </div>
 
+        <div className="
+          space-y-4
+          mb-10
+        ">
 
 
 
 
+          {
+            setting?.instagram && (
 
 
+              <a
 
+                href={setting.instagram}
 
-                      <div className="font-bold text-black">
+                target="_blank"
 
+                className="
+                  bg-white
+                  rounded-2xl
+                  p-5
+                  border
+                  border-[#E8DCC8]
+                  shadow-sm
+                  flex
+                  items-center
+                  gap-4
+                "
 
-                        {product.price} TL
+              >
 
 
-                      </div>
+                <div className="text-3xl">
 
+                  📸
 
+                </div>
 
 
+                <div>
 
+                  <div className="
+                    font-bold
+                  ">
 
-                    </div>
+                    Instagram
 
+                  </div>
 
 
+                  <div className="
+                    text-sm
+                    text-gray-500
+                  ">
 
+                    Lezzetlerimizi keşfedin
 
+                  </div>
 
-                  ))
 
+                </div>
 
-                }
 
+              </a>
 
 
+            )
+
+          }
+
+
+
+
+
+
+
+          <div className="
+            bg-white
+            rounded-2xl
+            p-5
+            border
+            border-[#E8DCC8]
+            shadow-sm
+            flex
+            items-center
+            gap-4
+          ">
+
+
+            <div className="text-3xl">
+
+              📶
+
+            </div>
+
+
+            <div>
+
+              <div className="font-bold">
+
+                WiFi
+
+              </div>
+
+
+              <div className="
+                text-sm
+                text-gray-500
+              ">
+
+                Şifre için personelimize danışabilirsiniz
+
+              </div>
+
+
+            </div>
+
+
+          </div>
+
+
+
+
+
+
+
+          {
+            setting?.workingHours && (
+
+
+              <div className="
+                bg-white
+                rounded-2xl
+                p-5
+                border
+                border-[#E8DCC8]
+                shadow-sm
+                flex
+                items-center
+                gap-4
+              ">
+
+
+                <div className="text-3xl">
+
+                  🕒
+
+                </div>
+
+
+                <div>
+
+                  <div className="font-bold">
+
+                    Çalışma Saatleri
+
+                  </div>
+
+
+                  <div className="
+                    text-sm
+                    text-gray-500
+                  ">
+
+                    {setting.workingHours}
+
+                  </div>
+
+
+                </div>
 
 
               </div>
 
 
+            )
+
+          }
+
+
+        </div>
 
 
 
-            </section>
 
 
 
 
 
-          ))
+
+        {/* TABLE SELECT */}
 
 
-        }
 
+        <section>
+
+
+          <div className="
+            text-center
+            mb-6
+          ">
+
+
+            <h2 className="
+              text-2xl
+              font-bold
+            ">
+
+              Hoş geldiniz 👋
+
+            </h2>
+
+
+
+            <p className="
+              mt-2
+              text-gray-600
+            ">
+
+              Masanızı seçerek menümüze ulaşabilirsiniz
+
+            </p>
+
+
+          </div>
+
+
+
+
+
+
+
+          <div className="
+            grid
+            grid-cols-3
+            gap-4
+          ">
+
+
+
+            {
+              tables.map((table)=>(
+
+
+                <Link
+
+                  key={table.id}
+
+                  href={`/menu/${table.number}`}
+
+
+                  className="
+                    h-24
+                    rounded-2xl
+                    bg-[#1F2A1F]
+                    text-white
+                    flex
+                    flex-col
+                    items-center
+                    justify-center
+                    shadow-md
+                    border
+                    border-[#C9A227]
+                    transition
+                    hover:bg-[#C65D3A]
+                  "
+
+                >
+
+                  <span className="
+                    text-xs
+                    opacity-80
+                  ">
+
+                    Masa
+
+                  </span>
+
+
+                  <span className="
+                    text-3xl
+                    font-bold
+                  ">
+
+                    {table.number}
+
+                  </span>
+
+
+                </Link>
+
+
+              ))
+
+            }
+
+
+          </div>
+
+
+
+        </section>
+
+
+
+
+
+
+
+
+        <footer className="
+          text-center
+          mt-12
+          text-sm
+          text-gray-500
+        ">
+
+
+          NONNA ©
+
+
+        </footer>
 
 
 
@@ -318,14 +650,9 @@ export default async function MenuPage(){
 
 
 
-
-
     </main>
 
-
-
   );
-
 
 
 }

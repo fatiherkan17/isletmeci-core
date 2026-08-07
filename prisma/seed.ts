@@ -2,13 +2,10 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-
 async function main() {
-
-  // Eski verileri temizle
+  // ÜRÜNLERİ TEMİZLE
   await prisma.product.deleteMany();
   await prisma.category.deleteMany();
-
 
   // KATEGORİLER
 
@@ -18,13 +15,11 @@ async function main() {
     },
   });
 
-
   const pizza = await prisma.category.create({
     data: {
       name: "Pizza",
     },
   });
-
 
   const icecek = await prisma.category.create({
     data: {
@@ -32,10 +27,7 @@ async function main() {
     },
   });
 
-
-
   // ÜRÜNLER
-
 
   await prisma.product.create({
     data: {
@@ -47,8 +39,6 @@ async function main() {
     },
   });
 
-
-
   await prisma.product.create({
     data: {
       name: "Simit Kahvaltı",
@@ -58,8 +48,6 @@ async function main() {
       categoryId: kahvalti.id,
     },
   });
-
-
 
   await prisma.product.create({
     data: {
@@ -71,8 +59,6 @@ async function main() {
     },
   });
 
-
-
   await prisma.product.create({
     data: {
       name: "Çiçek Pizza",
@@ -82,8 +68,6 @@ async function main() {
       categoryId: pizza.id,
     },
   });
-
-
 
   await prisma.product.create({
     data: {
@@ -95,13 +79,28 @@ async function main() {
     },
   });
 
+  // MASALAR
 
+  const tableCount = await prisma.table.count();
+
+  if (tableCount === 0) {
+    for (let i = 1; i <= 10; i++) {
+      await prisma.table.create({
+        data: {
+          number: i,
+          name: `Masa ${i}`,
+          capacity: 4,
+          status: "EMPTY",
+          active: true,
+        },
+      });
+    }
+
+    console.log("✅ 10 masa oluşturuldu");
+  }
 
   console.log("✅ Seed tamamlandı");
-
 }
-
-
 
 main()
   .catch((e) => {
