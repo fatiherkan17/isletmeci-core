@@ -4,252 +4,125 @@ import { prisma } from "@/app/lib/prisma";
 
 import { TableStatus } from "@prisma/client";
 
-
-
 export async function PATCH(
   request: Request
 ) {
-
-
   try {
-
-
     const body =
       await request.json();
-
-
 
     const {
       orderId,
       status,
     } = body;
 
+    // ============================================================
+    // EKSİK BİLGİ KONTROLÜ
+    // ============================================================
 
-
-
-
-    if(!orderId || !status){
-
-
+    if (!orderId || !status) {
       return NextResponse.json(
-
         {
-          error:"Eksik bilgi"
+          error: "Eksik bilgi",
         },
-
         {
-          status:400
+          status: 400,
         }
-
       );
-
     }
 
-
-
-
-
-
-
+    // ============================================================
+    // SİPARİŞ DURUMUNU GÜNCELLE
+    // ============================================================
 
     const order =
-
       await prisma.order.update({
-
-
-
-        where:{
-
-          id:orderId
-
+        where: {
+          id: orderId,
         },
 
-
-
-        data:{
-
-          status
-
+        data: {
+          status,
         },
 
-
-
-        include:{
-
-
-          table:true
-
-
-        }
-
-
+        include: {
+          table: true,
+        },
       });
 
-
-
-
-
-
-
-
+    // ============================================================
+    // MASA DURUMUNU BELİRLE
+    // ============================================================
 
     let tableStatus: TableStatus =
-
       TableStatus.ORDERED;
 
+    // ------------------------------------------------------------
+    // HAZIRLANIYOR
+    // ------------------------------------------------------------
 
-
-
-
-
-
-
-    if(status === "PREPARING"){
-
-
+    if (status === "PREPARING") {
       tableStatus =
-
         TableStatus.PREPARING;
-
-
     }
 
+    // ------------------------------------------------------------
+    // HAZIR
+    // ------------------------------------------------------------
 
-
-
-
-
-
-
-    if(status === "READY"){
-
-
+    if (status === "READY") {
       tableStatus =
-
         TableStatus.READY;
-
-
     }
 
+    // ------------------------------------------------------------
+    // ÖDENDİ
+    //
+    // Sipariş tamamen ödendiyse masa tekrar boş olmalıdır.
+    // ------------------------------------------------------------
 
-
-
-
-
-
-
-    if(status === "PAID"){
-
-
+    if (status === "PAID") {
       tableStatus =
-
-        TableStatus.CLOSED;
-
-
+        TableStatus.EMPTY;
     }
 
-
-
-
-
-
-
-
+    // ============================================================
+    // MASA DURUMUNU GÜNCELLE
+    // ============================================================
 
     await prisma.table.update({
-
-
-
-      where:{
-
-
-        id:
-          order.tableId
-
-
+      where: {
+        id: order.tableId,
       },
 
-
-
-      data:{
-
-
-        status:
-          tableStatus
-
-
-      }
-
-
-
+      data: {
+        status: tableStatus,
+      },
     });
 
-
-
-
-
-
-
-
+    // ============================================================
+    // BAŞARILI
+    // ============================================================
 
     return NextResponse.json({
-
-
-
-      success:true,
-
-
-
-      order
-
-
-
+      success: true,
+      order,
     });
 
-
-
-
-
-
-
-  } catch(error){
-
-
-
+  } catch (error) {
     console.error(
-
       "STATUS UPDATE ERROR:",
-
       error
-
     );
-
-
-
-
 
     return NextResponse.json(
-
-
       {
-
         error:
-          "Durum güncellenemedi"
-
+          "Durum güncellenemedi",
       },
-
-
       {
-
-        status:500
-
+        status: 500,
       }
-
-
     );
-
-
   }
-
-
 }

@@ -4,6 +4,8 @@ import { prisma } from "@/app/lib/prisma";
 
 import { TableStatus } from "@prisma/client";
 
+import { createPayment } from "@/app/lib/payment/payment-service";
+
 
 
 export async function PATCH(
@@ -31,15 +33,12 @@ export async function PATCH(
     if (!orderId) {
 
       return NextResponse.json(
-
         {
           error: "Sipariş bulunamadı"
         },
-
         {
           status: 400
         }
-
       );
 
     }
@@ -56,15 +55,12 @@ export async function PATCH(
     ) {
 
       return NextResponse.json(
-
         {
           error: "Geçersiz ödeme türü"
         },
-
         {
           status: 400
         }
-
       );
 
     }
@@ -81,15 +77,11 @@ export async function PATCH(
       await prisma.order.findUnique({
 
         where: {
-
           id: orderId
-
         },
 
         include: {
-
           table: true
-
         }
 
       });
@@ -99,15 +91,12 @@ export async function PATCH(
     if (!order) {
 
       return NextResponse.json(
-
         {
           error: "Sipariş bulunamadı"
         },
-
         {
           status: 404
         }
-
       );
 
     }
@@ -121,15 +110,13 @@ export async function PATCH(
     if (order.status === "PAID") {
 
       return NextResponse.json(
-
         {
-          error: "Bu sipariş zaten ödenmiş"
+          error:
+            "Bu sipariş zaten ödenmiş"
         },
-
         {
           status: 400
         }
-
       );
 
     }
@@ -188,16 +175,13 @@ export async function PATCH(
     if (activeOrders.length === 0) {
 
       return NextResponse.json(
-
         {
           error:
             "Ödenecek açık sipariş bulunamadı"
         },
-
         {
           status: 400
         }
-
       );
 
     }
@@ -205,11 +189,100 @@ export async function PATCH(
 
 
     // ============================================================
-    // TEK BİR ÖDEME ZAMANI OLUŞTUR
+    // TOPLAM ÖDEME TUTARI
     //
-    // Aynı masadaki tüm siparişlerin aynı ödeme işlemi
-    // içerisinde kapandığını göstermek için aynı zamanı
-    // kullanıyoruz.
+    // Aynı masadaki bütün aktif siparişlerin toplamı.
+    //
+    // POS'a TEK BİR TUTAR olarak gönderilecek.
+    // ============================================================
+
+    const total =
+      activeOrders.reduce(
+        (sum, activeOrder) =>
+          sum + activeOrder.total,
+        0
+      );
+
+
+
+    // ============================================================
+    // KART ÖDEMESİ
+    //
+    // BURADA YENİ POS PAYMENT ENGINE DEVREYE GİRER.
+    //
+    // POS BAŞARILI OLMADAN:
+    //
+    // Order = PAID
+    // Table = EMPTY
+    //
+    // YAPILMAZ.
+    // ============================================================
+
+    if (paymentType === "CARD") {
+
+      const idempotencyKey =
+        `order-${order.tableId}-${Date.now()}-${crypto.randomUUID()}`;
+
+
+
+      const paymentResult =
+        await createPayment({
+
+          orderId:
+            order.id,
+
+          amount:
+            total,
+
+          method:
+            "CARD",
+
+          idempotencyKey
+
+        });
+
+
+
+      // ========================================================
+      // POS BAŞARISIZ
+      //
+      // Hiçbir Order kapanmaz.
+      // Masa kapanmaz.
+      // ========================================================
+
+      if (!paymentResult.success) {
+
+        return NextResponse.json(
+          {
+            success: false,
+
+            error:
+              paymentResult.errorMessage ??
+              "POS ödeme işlemi başarısız",
+
+            paymentId:
+              paymentResult.paymentId,
+
+            paymentStatus:
+              paymentResult.status,
+
+            errorCode:
+              paymentResult.errorCode ?? null
+
+          },
+          {
+            status: 402
+          }
+        );
+
+      }
+
+    }
+
+
+
+    // ============================================================
+    // ÖDEME ZAMANI
     // ============================================================
 
     const paidAt =
@@ -220,11 +293,11 @@ export async function PATCH(
     // ============================================================
     // AKTİF SİPARİŞLERİ ÖDENMİŞ OLARAK KAPAT
     //
-    // paymentType:
-    // CASH / CARD
+    // CASH:
+    // Mevcut sistem aynen devam eder.
     //
-    // paidAt:
-    // Gerçek ödeme zamanı
+    // CARD:
+    // Sadece POS başarılı olduktan sonra buraya gelir.
     // ============================================================
 
     await prisma.order.updateMany({
@@ -292,9 +365,6 @@ export async function PATCH(
 
     // ============================================================
     // KAPATILAN SİPARİŞLERİ GERİ AL
-    //
-    // Frontend ve ileride adisyon arşivi için
-    // tamamlanmış kayıtları döndürüyoruz.
     // ============================================================
 
     const paidOrders =
@@ -306,7 +376,8 @@ export async function PATCH(
 
             in:
               activeOrders.map(
-                item => item.id
+                item =>
+                  item.id
               )
 
           }
@@ -343,7 +414,7 @@ export async function PATCH(
     // TOPLAM KAPATILAN TUTAR
     // ============================================================
 
-    const total =
+    const paidTotal =
       paidOrders.reduce(
 
         (
@@ -382,7 +453,8 @@ export async function PATCH(
       table:
         order.table,
 
-      total,
+      total:
+        paidTotal,
 
       paidOrderCount:
         paidOrders.length,
@@ -391,35 +463,23 @@ export async function PATCH(
 
     });
 
-
-
   } catch (error) {
 
     console.error(
-
       "PAYMENT ERROR:",
-
       error
-
     );
 
 
 
     return NextResponse.json(
-
       {
-
         error:
           "Ödeme işlemi başarısız"
-
       },
-
       {
-
         status: 500
-
       }
-
     );
 
   }

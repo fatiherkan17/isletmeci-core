@@ -20,67 +20,67 @@ import type {
   Product,
 } from "@/types/cashier";
 
-
 // ============================================================
 // KASA
 // ============================================================
 
 export default function CashierPage() {
+  // ==========================================================
+  // MASALAR
+  // ==========================================================
 
-  const [
-    tables,
-    setTables
-  ] =
+  const [tables, setTables] =
     useState<CashierTable[]>([]);
 
+  // ==========================================================
+  // SEÇİLİ MASA
+  // ==========================================================
 
-  const [
-    selectedTableId,
-    setSelectedTableId
-  ] =
+  const [selectedTableId, setSelectedTableId] =
     useState<string | null>(null);
 
+  // ==========================================================
+  // ADİSYON ÜRÜNLERİ
+  // ==========================================================
 
-  const [
-    items,
-    setItems
-  ] =
+  const [items, setItems] =
     useState<OrderItem[]>([]);
 
+  // ==========================================================
+  // ÜRÜN MODALI
+  // ==========================================================
 
-  const [
-    productModalOpen,
-    setProductModalOpen
-  ] =
+  const [productModalOpen, setProductModalOpen] =
     useState(false);
 
+  // ==========================================================
+  // GÜNLÜK İŞLEMLER PANELİ
+  //
+  // Artık sayfanın altında uzayan bir bölüm değil.
+  // Kasa içerisinde açılıp kapanan ayrı çalışma alanı.
+  // ==========================================================
+
+  const [dailyAccountsOpen, setDailyAccountsOpen] =
+    useState(false);
 
   // ==========================================================
   // MASALARI GETİR
   // ==========================================================
 
   useEffect(() => {
-
     loadTables();
 
-
-    const timer =
-      setInterval(
-        loadTables,
-        3000
-      );
-
+    const timer = setInterval(
+      loadTables,
+      3000
+    );
 
     return () =>
       clearInterval(timer);
-
   }, []);
 
-
   async function loadTables() {
-
     try {
-
       const response =
         await fetch(
           "/api/tables",
@@ -89,33 +89,23 @@ export default function CashierPage() {
           }
         );
 
-
       if (!response.ok) {
-
         throw new Error(
           "Masalar alınamadı"
         );
-
       }
-
 
       const data =
         await response.json();
 
-
       setTables(data);
-
     } catch (error) {
-
       console.error(
         "CASHIER TABLES ERROR:",
         error
       );
-
     }
-
   }
-
 
   // ==========================================================
   // SEÇİLİ MASA
@@ -123,38 +113,30 @@ export default function CashierPage() {
 
   const selectedTable =
     useMemo(() => {
-
       return (
         tables.find(
-          table =>
+          (table) =>
             table.id ===
             selectedTableId
-        )
-        ??
-        null
+        ) ?? null
       );
-
     }, [
       tables,
-      selectedTableId
+      selectedTableId,
     ]);
-
 
   // ==========================================================
   // SEÇİLİ MASANIN ÜRÜNLERİ
   // ==========================================================
 
   useEffect(() => {
-
     if (
       selectedTable?.order?.items
     ) {
-
       const orderItems:
         OrderItem[] =
         selectedTable.order.items.map(
-          item => ({
-
+          (item) => ({
             productId:
               item.productId,
 
@@ -163,8 +145,7 @@ export default function CashierPage() {
               "",
 
             unitPrice:
-              item.price ??
-              0,
+              item.price ?? 0,
 
             quantity:
               item.quantity,
@@ -176,25 +157,16 @@ export default function CashierPage() {
             image:
               item.product?.image ??
               null,
-
           })
         );
 
-
-      setItems(
-        orderItems
-      );
-
+      setItems(orderItems);
     } else {
-
       setItems([]);
-
     }
-
   }, [
-    selectedTable
+    selectedTable,
   ]);
-
 
   // ==========================================================
   // TOPLAMLAR
@@ -202,15 +174,38 @@ export default function CashierPage() {
 
   const totals =
     useMemo(() => {
-
       return calculateTotals(
         items
       );
-
     }, [
-      items
+      items,
     ]);
 
+  // ==========================================================
+  // MASA SEÇ
+  //
+  // Mevcut davranış korunuyor.
+  // ==========================================================
+
+  function handleSelectTable(
+    tableId: string
+  ) {
+    setDailyAccountsOpen(false);
+    setSelectedTableId(tableId);
+  }
+
+  // ==========================================================
+  // MASALARA DÖN
+  //
+  // Yeni navigasyon noktası.
+  // Mevcut sipariş silinmez.
+  // Sadece aktif masa seçimi kaldırılır.
+  // ==========================================================
+
+  function handleBackToTables() {
+    setProductModalOpen(false);
+    setSelectedTableId(null);
+  }
 
   // ==========================================================
   // ÜRÜN EKLE
@@ -219,21 +214,15 @@ export default function CashierPage() {
   async function handleAddProduct(
     product: Product
   ) {
-
     if (!selectedTable) {
-
       return;
-
     }
 
-
     try {
-
       const response =
         await fetch(
           "/api/orders",
           {
-
             method: "POST",
 
             headers: {
@@ -243,32 +232,23 @@ export default function CashierPage() {
 
             body:
               JSON.stringify({
-
                 tableId:
                   selectedTable.id,
 
                 productId:
                   product.id,
-
               }),
-
           }
         );
 
-
       if (!response.ok) {
-
         throw new Error(
           "Ürün eklenemedi"
         );
-
       }
 
-
       await loadTables();
-
     } catch (error) {
-
       console.error(
         "ADD PRODUCT ERROR:",
         error
@@ -277,11 +257,8 @@ export default function CashierPage() {
       alert(
         "Ürün eklenemedi"
       );
-
     }
-
   }
-
 
   // ==========================================================
   // MİKTAR ARTIR
@@ -290,17 +267,14 @@ export default function CashierPage() {
   function handleIncrease(
     productId: string
   ) {
-
     setItems(
-      current =>
+      (current) =>
         increaseQuantity(
           current,
           productId
         )
     );
-
   }
-
 
   // ==========================================================
   // MİKTAR AZALT
@@ -309,17 +283,14 @@ export default function CashierPage() {
   function handleDecrease(
     productId: string
   ) {
-
     setItems(
-      current =>
+      (current) =>
         decreaseQuantity(
           current,
           productId
         )
     );
-
   }
-
 
   // ==========================================================
   // ÜRÜN SİL
@@ -328,86 +299,65 @@ export default function CashierPage() {
   function handleRemove(
     productId: string
   ) {
-
     setItems(
-      current =>
+      (current) =>
         removeProduct(
           current,
           productId
         )
     );
-
   }
-
 
   // ==========================================================
   // SİPARİŞ DURUMU
+  //
+  // Mevcut API korunuyor.
   // ==========================================================
 
   async function handleUpdateStatus(
-
     status:
       | "PREPARING"
       | "READY"
       | "PAID"
       | "CANCELLED"
-
   ) {
-
     if (
       !selectedTable?.order?.id
     ) {
-
       return;
-
     }
 
-
     try {
-
       const response =
         await fetch(
           "/api/orders/status",
           {
-
             method: "PATCH",
 
             headers: {
-
               "Content-Type":
                 "application/json",
-
             },
 
             body:
               JSON.stringify({
-
                 orderId:
                   selectedTable
-                    .order
-                    .id,
+                    .order.id,
 
                 status,
-
               }),
-
           }
         );
 
-
       if (!response.ok) {
-
         throw new Error(
           "Durum güncellenemedi"
         );
-
       }
 
-
       await loadTables();
-
     } catch (error) {
-
       console.error(
         "UPDATE STATUS ERROR:",
         error
@@ -416,278 +366,544 @@ export default function CashierPage() {
       alert(
         "Sipariş durumu güncellenemedi"
       );
-
     }
-
   }
-
 
   // ==========================================================
   // ÖDEME
+  //
+  // Mevcut ödeme API'si korunuyor.
+  // Ödeme başarılı olduğunda masa ekranına dönülüyor.
   // ==========================================================
 
   async function handlePayment(
     paymentType: string
   ) {
-
     if (
       !selectedTable?.order?.id
     ) {
-
       alert(
         "Açık sipariş yok"
       );
 
       return;
-
     }
 
-
     try {
-
       const response =
         await fetch(
           "/api/orders/payment",
           {
-
             method: "PATCH",
 
             headers: {
-
               "Content-Type":
                 "application/json",
-
             },
 
             body:
               JSON.stringify({
-
                 orderId:
                   selectedTable
-                    .order
-                    .id,
+                    .order.id,
 
                 paymentType,
-
               }),
-
           }
         );
 
-
       if (!response.ok) {
-
         throw new Error(
           "Ödeme başarısız"
         );
-
       }
 
+      // ------------------------------------------------------
+      // ÖDEME BAŞARILI
+      // ------------------------------------------------------
 
       setItems([]);
 
+      setProductModalOpen(false);
 
-      setSelectedTableId(
-        null
-      );
-
+      setSelectedTableId(null);
 
       await loadTables();
-
     } catch (error) {
-
       console.error(
         "PAYMENT ERROR:",
         error
       );
 
-
       alert(
         "Ödeme alınamadı"
       );
-
     }
-
   }
-
 
   // ==========================================================
   // RENDER
   // ==========================================================
 
   return (
-
     <main
       className="
-        space-y-6
+        flex
+        h-dvh
+        max-h-dvh
+        min-h-0
+        flex-col
+        overflow-hidden
       "
     >
-
       {/* ====================================================
-          ÜST BAŞLIK
-      ==================================================== */}
+          ÜST KASA BAR
+         ==================================================== */}
 
-      <div
+      <header
         className="
           flex
-          flex-col
-          gap-2
-          sm:flex-row
-          sm:items-end
-          sm:justify-between
+          shrink-0
+          items-center
+          justify-between
+          gap-4
+          border-b
+          border-gray-200
+          bg-white
+          px-4
+          py-3
+          md:px-6
+          md:py-4
         "
       >
-
-        <div>
-
-          <h1
+        <div className="min-w-0">
+          <div
             className="
-              text-4xl
-              font-bold
-              text-gray-900
+              flex
+              items-center
+              gap-3
             "
           >
-            💰 NONNA Kasa
-          </h1>
+            <div
+              className="
+                flex
+                h-10
+                w-10
+                shrink-0
+                items-center
+                justify-center
+                rounded-xl
+                bg-black
+                text-lg
+                text-white
+              "
+            >
+              ₺
+            </div>
 
+            <div className="min-w-0">
+              <h1
+                className="
+                  truncate
+                  text-xl
+                  font-extrabold
+                  tracking-tight
+                  text-gray-900
+                  md:text-2xl
+                "
+              >
+                NONNA Kasa
+              </h1>
 
-          <p
-            className="
-              mt-1
-              text-sm
-              text-gray-500
-            "
-          >
-            Masa, adisyon ve ödeme yönetimi
-          </p>
-
+              <p
+                className="
+                  hidden
+                  text-xs
+                  text-gray-500
+                  sm:block
+                "
+              >
+                Masa, adisyon ve ödeme
+                yönetimi
+              </p>
+            </div>
+          </div>
         </div>
 
-      </div>
+        {/* ==================================================
+            GÜNLÜK İŞLEMLER
+           ================================================== */}
 
+        <button
+          type="button"
+          onClick={() =>
+            setDailyAccountsOpen(
+              true
+            )
+          }
+          className="
+            flex
+            shrink-0
+            items-center
+            gap-2
+            rounded-xl
+            border
+            border-gray-200
+            bg-white
+            px-3
+            py-2.5
+            text-sm
+            font-bold
+            text-gray-700
+            shadow-sm
+            transition
+            hover:border-gray-300
+            hover:bg-gray-50
+            active:scale-[0.98]
+            md:px-4
+          "
+        >
+          <span className="text-base">
+            📊
+          </span>
+
+          <span className="hidden sm:inline">
+            Günlük İşlemler
+          </span>
+
+          <span className="sm:hidden">
+            Günlük
+          </span>
+        </button>
+      </header>
 
       {/* ====================================================
-          ANA KASA
-      ==================================================== */}
+          ANA KASA ÇALIŞMA ALANI
+         ==================================================== */}
 
       <div
         className="
-          grid
-          grid-cols-12
-          gap-6
+          min-h-0
+          flex-1
+          overflow-hidden
+          bg-gray-100
+          p-3
+          md:p-4
         "
       >
-
-        {/* ==================================================
-            MASALAR
-        ================================================== */}
-
-        <section
+        <div
           className="
-            col-span-12
-            xl:col-span-8
-            space-y-6
+            flex
+            h-full
+            min-h-0
+            flex-col
+            gap-3
+            xl:grid
+            xl:grid-cols-12
+            xl:gap-4
           "
         >
+          {/* ==================================================
+              SOL / MASALAR
+             ================================================== */}
 
-          <TablesGrid
+          <section
+            className={`
+              min-h-0
+              flex-1
+              xl:col-span-8
+              xl:flex
+              xl:flex-col
+              ${
+                selectedTableId
+                  ? "hidden xl:flex"
+                  : "flex"
+              }
+            `}
+          >
+            <div
+              className="
+                min-h-0
+                flex-1
+                overflow-y-auto
+                pr-1
+                scrollbar-thin
+              "
+            >
+              <TablesGrid
+                tables={
+                  tables
+                }
 
-            tables={
-              tables
-            }
+                selectedTableId={
+                  selectedTableId
+                }
 
-            selectedTableId={
-              selectedTableId
-            }
+                onSelectTable={
+                  handleSelectTable
+                }
+              />
 
-            onSelectTable={
-              setSelectedTableId
-            }
+              {/* =================================================
+                  SON İŞLEMLER
+                 ================================================= */}
 
-          />
+              <div
+                className="
+                  mt-3
+                  hidden
+                  md:block
+                "
+              >
+                <RecentOrders />
+              </div>
+            </div>
+          </section>
 
+          {/* ==================================================
+              SAĞ / ADİSYON
+             ================================================== */}
 
-          {/* =================================================
-              SON İŞLEMLER
-          ================================================= */}
+          <aside
+            className={`
+              min-h-0
+              flex-1
+              xl:col-span-4
+              xl:flex
+              xl:flex-col
+              ${
+                selectedTableId
+                  ? "flex"
+                  : "hidden xl:flex"
+              }
+            `}
+          >
+            {/* =================================================
+                MASALARA DÖN
+               ================================================= */}
 
-          <RecentOrders />
+            {selectedTable && (
+              <button
+                type="button"
+                onClick={
+                  handleBackToTables
+                }
+                className="
+                  mb-2
+                  flex
+                  shrink-0
+                  items-center
+                  gap-2
+                  rounded-xl
+                  border
+                  border-gray-200
+                  bg-white
+                  px-4
+                  py-3
+                  text-sm
+                  font-bold
+                  text-gray-700
+                  shadow-sm
+                  transition
+                  hover:bg-gray-50
+                  active:scale-[0.99]
+                  xl:hidden
+                "
+              >
+                <span className="text-lg">
+                  ←
+                </span>
 
-        </section>
+                <span>
+                  Masalara Dön
+                </span>
+              </button>
+            )}
 
+            <div
+              className="
+                min-h-0
+                flex-1
+                overflow-hidden
+                rounded-2xl
+              "
+            >
+              <OrderPanel
+                table={
+                  selectedTable
+                }
 
-        {/* ==================================================
-            ADİSYON
-        ================================================== */}
+                items={
+                  items
+                }
 
-        <aside
-          className="
-            col-span-12
-            xl:col-span-4
-          "
-        >
+                totals={
+                  totals
+                }
 
-          <OrderPanel
+                productModalOpen={
+                  productModalOpen
+                }
 
-            table={
-              selectedTable
-            }
+                setProductModalOpen={
+                  setProductModalOpen
+                }
 
-            items={
-              items
-            }
+                onAddProduct={
+                  handleAddProduct
+                }
 
-            totals={
-              totals
-            }
+                onIncrease={
+                  handleIncrease
+                }
 
-            productModalOpen={
-              productModalOpen
-            }
+                onDecrease={
+                  handleDecrease
+                }
 
-            setProductModalOpen={
-              setProductModalOpen
-            }
+                onRemove={
+                  handleRemove
+                }
 
-            onAddProduct={
-              handleAddProduct
-            }
+                onUpdateStatus={
+                  handleUpdateStatus
+                }
 
-            onIncrease={
-              handleIncrease
-            }
-
-            onDecrease={
-              handleDecrease
-            }
-
-            onRemove={
-              handleRemove
-            }
-
-            onUpdateStatus={
-              handleUpdateStatus
-            }
-
-            onPayment={
-              handlePayment
-            }
-
-          />
-
-        </aside>
-
+                onPayment={
+                  handlePayment
+                }
+              />
+            </div>
+          </aside>
+        </div>
       </div>
 
-
       {/* ====================================================
-          GÜNLÜK HESAP
-      ==================================================== */}
+          GÜNLÜK HESAPLAR — MODAL / ÇALIŞMA ALANI
+          
+          Mevcut DailyAccounts bileşeni çöpe atılmıyor.
+          Sadece ana sayfanın altına uzaması engelleniyor.
+         ==================================================== */}
 
-      <DailyAccounts />
+      {dailyAccountsOpen && (
+        <div
+          className="
+            fixed
+            inset-0
+            z-[100]
+            flex
+            items-center
+            justify-center
+            bg-black/50
+            p-2
+            md:p-6
+          "
+        >
+          <div
+            className="
+              flex
+              h-[96dvh]
+              w-full
+              max-w-7xl
+              min-h-0
+              flex-col
+              overflow-hidden
+              rounded-2xl
+              bg-gray-100
+              shadow-2xl
+            "
+          >
+            {/* =================================================
+                PANEL BAŞLIĞI
+               ================================================= */}
 
+            <div
+              className="
+                flex
+                shrink-0
+                items-center
+                justify-between
+                border-b
+                border-gray-200
+                bg-white
+                px-4
+                py-3
+                md:px-6
+                md:py-4
+              "
+            >
+              <div>
+                <h2
+                  className="
+                    text-lg
+                    font-extrabold
+                    text-gray-900
+                    md:text-xl
+                  "
+                >
+                  📊 Günlük İşlemler
+                </h2>
+
+                <p
+                  className="
+                    mt-0.5
+                    hidden
+                    text-xs
+                    text-gray-500
+                    sm:block
+                  "
+                >
+                  Günlük satış ve
+                  tamamlanan adisyonlar
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setDailyAccountsOpen(
+                    false
+                  )
+                }
+                className="
+                  flex
+                  h-10
+                  w-10
+                  items-center
+                  justify-center
+                  rounded-xl
+                  bg-gray-100
+                  text-lg
+                  font-bold
+                  text-gray-600
+                  transition
+                  hover:bg-gray-200
+                  active:scale-95
+                "
+                aria-label="Günlük işlemleri kapat"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* =================================================
+                MEVCUT DAILY ACCOUNTS
+               ================================================= */}
+
+            <div
+              className="
+                min-h-0
+                flex-1
+                overflow-y-auto
+                p-2
+                md:p-4
+              "
+            >
+              <DailyAccounts />
+            </div>
+          </div>
+        </div>
+      )}
     </main>
-
   );
-
 }
