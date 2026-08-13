@@ -125,21 +125,20 @@ export default async function AdminLayout({
 
           </div>
 
-          {/* GELECEK MODÜLLER */}
+          {/* SİPARİŞ / KASA */}
 
           <div>
 
             <p className="text-gray-400 text-sm mb-2">
-              GELECEK MODÜLLER
+              SİPARİŞ / KASA
             </p>
 
-            <div className="text-gray-500 p-3">
-              🧾 Sipariş
-            </div>
-
-            <div className="text-gray-500 p-3">
-              💰 Kasa
-            </div>
+            <Link
+              href="/admin/cashier"
+              className="block p-3 rounded hover:bg-gray-800"
+            >
+              🧾 Sipariş / Kasa
+            </Link>
 
             <div className="text-gray-500 p-3">
               📈 Raporlama
