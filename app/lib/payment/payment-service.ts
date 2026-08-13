@@ -1,17 +1,17 @@
 import { prisma } from "@/app/lib/prisma";
 
-import { BekoAdapter } from "./beko-adapter";
-
 import type {
   PaymentRequest,
   PaymentResult,
 } from "./types";
 
-const bekoAdapter = new BekoAdapter();
-
 export async function createPayment(
   request: PaymentRequest
 ): Promise<PaymentResult> {
+  // ============================================================
+  // IDEMPOTENCY KONTROLÜ
+  // ============================================================
+
   const existingPayment =
     await prisma.payment.findUnique({
       where: {
@@ -52,6 +52,10 @@ export async function createPayment(
     };
   }
 
+  // ============================================================
+  // ÖDEME KAYDI
+  // ============================================================
+
   const payment =
     await prisma.payment.create({
       data: {
@@ -74,6 +78,10 @@ export async function createPayment(
           request.idempotencyKey,
       },
     });
+
+  // ============================================================
+  // NAKİT ÖDEME
+  // ============================================================
 
   if (request.method === "CASH") {
     const completedPayment =
@@ -108,8 +116,21 @@ export async function createPayment(
     };
   }
 
-  if (request.method !== "CARD") {
-    const failedPayment =
+  // ============================================================
+  // KART ÖDEME
+  //
+  // V1'DE POS ENTEGRASYONU YOK.
+  //
+  // Fiziksel POS'tan ödeme alındıktan sonra İşletmeci
+  // üzerinde Kart seçildiğinde ödeme kaydı başarılı
+  // olarak tamamlanır.
+  //
+  // TokenX / Beko entegrasyonu daha sonra ayrı adapter
+  // üzerinden tekrar bağlanacaktır.
+  // ============================================================
+
+  if (request.method === "CARD") {
+    const completedPayment =
       await prisma.payment.update({
         where: {
           id: payment.id,
@@ -117,71 +138,35 @@ export async function createPayment(
 
         data: {
           status:
-            "FAILED",
+            "SUCCEEDED",
 
-          errorCode:
-            "UNSUPPORTED_PAYMENT_METHOD",
+          startedAt:
+            new Date(),
 
-          errorMessage:
-            "Desteklenmeyen ödeme yöntemi.",
+          completedAt:
+            new Date(),
         },
       });
 
     return {
-      success: false,
+      success: true,
 
       paymentId:
-        failedPayment.id,
+        completedPayment.id,
 
       status:
-        failedPayment.status,
+        completedPayment.status,
 
       amount:
-        failedPayment.amount,
-
-      errorCode:
-        failedPayment.errorCode,
-
-      errorMessage:
-        failedPayment.errorMessage,
+        completedPayment.amount,
     };
   }
 
-  await prisma.payment.update({
-    where: {
-      id: payment.id,
-    },
+  // ============================================================
+  // DİĞER ÖDEME TÜRLERİ
+  // ============================================================
 
-    data: {
-      status:
-        "PROCESSING",
-
-      startedAt:
-        new Date(),
-    },
-  });
-
-  const posResult =
-    await bekoAdapter.startPayment({
-      paymentId:
-        payment.id,
-
-      amount:
-        payment.amount,
-
-      idempotencyKey:
-        payment.idempotencyKey,
-    });
-
-  const finalStatus =
-    posResult.success
-      ? "SUCCEEDED"
-      : posResult.status ===
-        "CANCELLED"
-      ? "CANCELLED"
-      : "FAILED";
-
-  const completedPayment =
+  const failedPayment =
     await prisma.payment.update({
       where: {
         id: payment.id,
@@ -189,63 +174,32 @@ export async function createPayment(
 
       data: {
         status:
-          finalStatus,
-
-        providerTransactionId:
-          posResult.providerTransactionId,
-
-        authorizationCode:
-          posResult.authorizationCode,
-
-        referenceNumber:
-          posResult.referenceNumber,
+          "FAILED",
 
         errorCode:
-          posResult.errorCode,
+          "UNSUPPORTED_PAYMENT_METHOD",
 
         errorMessage:
-          posResult.errorMessage,
-
-        completedAt:
-          posResult.success
-            ? new Date()
-            : undefined,
-
-        cancelledAt:
-          finalStatus ===
-          "CANCELLED"
-            ? new Date()
-            : undefined,
+          "Desteklenmeyen ödeme yöntemi.",
       },
     });
 
   return {
-    success:
-      completedPayment.status ===
-      "SUCCEEDED",
+    success: false,
 
     paymentId:
-      completedPayment.id,
+      failedPayment.id,
 
     status:
-      completedPayment.status,
+      failedPayment.status,
 
     amount:
-      completedPayment.amount,
-
-    providerTransactionId:
-      completedPayment.providerTransactionId,
-
-    authorizationCode:
-      completedPayment.authorizationCode,
-
-    referenceNumber:
-      completedPayment.referenceNumber,
+      failedPayment.amount,
 
     errorCode:
-      completedPayment.errorCode,
+      failedPayment.errorCode,
 
     errorMessage:
-      completedPayment.errorMessage,
+      failedPayment.errorMessage,
   };
 }

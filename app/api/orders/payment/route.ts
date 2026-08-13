@@ -1,49 +1,36 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 
 import { prisma } from "@/app/lib/prisma";
-
 import { TableStatus } from "@prisma/client";
 
 import { createPayment } from "@/app/lib/payment/payment-service";
-
-
+import { consumeOrderStock } from "@/app/lib/stock/consume-order-stock";
 
 export async function PATCH(
   request: Request
 ) {
-
   try {
-
-    const body =
-      await request.json();
-
-
+    const body = await request.json();
 
     const {
       orderId,
       paymentType,
     } = body;
 
-
-
     // ============================================================
-    // SİPARİŞ ID KONTROLÜ
+    // SİPARİŞ KONTROLÜ
     // ============================================================
 
     if (!orderId) {
-
       return NextResponse.json(
         {
-          error: "Sipariş bulunamadı"
+          error: "Sipariş bulunamadı",
         },
         {
-          status: 400
+          status: 400,
         }
       );
-
     }
-
-
 
     // ============================================================
     // ÖDEME TÜRÜ KONTROLÜ
@@ -53,147 +40,98 @@ export async function PATCH(
       paymentType !== "CASH" &&
       paymentType !== "CARD"
     ) {
-
       return NextResponse.json(
         {
-          error: "Geçersiz ödeme türü"
+          error: "Geçersiz ödeme türü",
         },
         {
-          status: 400
+          status: 400,
         }
       );
-
     }
 
-
-
     // ============================================================
-    // ÖDENMEK İSTENEN SİPARİŞİ BUL
-    //
-    // Bu sipariş üzerinden masayı tespit ediyoruz.
+    // SİPARİŞİ BUL
     // ============================================================
 
     const order =
       await prisma.order.findUnique({
-
         where: {
-          id: orderId
+          id: orderId,
         },
-
         include: {
-          table: true
-        }
-
+          table: true,
+        },
       });
 
-
-
     if (!order) {
-
       return NextResponse.json(
         {
-          error: "Sipariş bulunamadı"
+          error: "Sipariş bulunamadı",
         },
         {
-          status: 404
+          status: 404,
         }
       );
-
     }
-
-
 
     // ============================================================
     // SİPARİŞ ZATEN ÖDENMİŞ Mİ?
     // ============================================================
 
     if (order.status === "PAID") {
-
       return NextResponse.json(
         {
           error:
-            "Bu sipariş zaten ödenmiş"
+            "Bu sipariş zaten ödenmiş",
         },
         {
-          status: 400
+          status: 400,
         }
       );
-
     }
 
-
-
     // ============================================================
-    // AYNI MASANIN TÜM AKTİF SİPARİŞLERİNİ BUL
-    //
-    // Kasa aynı masanın birden fazla QR siparişini
-    // tek adisyonda gösteriyor.
-    //
-    // Bu nedenle ödeme sırasında masanın:
+    // AYNI MASANIN TÜM AKTİF SİPARİŞLERİ
     //
     // OPEN
     // PREPARING
     // READY
     //
-    // durumundaki bütün siparişleri kapanır.
+    // Bu siparişlerin tamamı tek hesap olarak kapatılır.
     // ============================================================
 
     const activeOrders =
       await prisma.order.findMany({
-
         where: {
-
-          tableId:
-            order.tableId,
-
+          tableId: order.tableId,
           status: {
-
             in: [
-
               "OPEN",
-
               "PREPARING",
-
-              "READY"
-
-            ]
-
-          }
-
+              "READY",
+            ],
+          },
         },
-
         orderBy: {
-
-          createdAt: "asc"
-
-        }
-
+          createdAt: "asc",
+        },
       });
 
-
-
     if (activeOrders.length === 0) {
-
       return NextResponse.json(
         {
           error:
-            "Ödenecek açık sipariş bulunamadı"
+            "Ödenecek açık sipariş bulunamadı",
         },
         {
-          status: 400
+          status: 400,
         }
       );
-
     }
 
-
-
     // ============================================================
-    // TOPLAM ÖDEME TUTARI
-    //
-    // Aynı masadaki bütün aktif siparişlerin toplamı.
-    //
-    // POS'a TEK BİR TUTAR olarak gönderilecek.
+    // TOPLAM
     // ============================================================
 
     const total =
@@ -203,55 +141,120 @@ export async function PATCH(
         0
       );
 
+    // ============================================================
+    // AKTİF STOK LOKASYONU
+    // ============================================================
 
+    const stockLocation =
+      await prisma.stockLocation.findFirst({
+        where: {
+          active: true,
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+      });
+
+    if (!stockLocation) {
+      return NextResponse.json(
+        {
+          error:
+            "Aktif stok lokasyonu bulunamadı.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    const activeOrderIds =
+      activeOrders.map(
+        (activeOrder) =>
+          activeOrder.id
+      );
+
+    // ============================================================
+    // ÖDEME ÖNCESİ STOK KONTROLÜ
+    //
+    // consumeOrderStock gerçek stok tüketim işlemini yapar.
+    //
+    // Burada transaction sonunda özel hata fırlatıyoruz.
+    // Böylece yapılan bütün stok değişiklikleri rollback edilir.
+    //
+    // Amaç:
+    // POS'a gitmeden önce stok yeterli mi kontrol etmek.
+    // ============================================================
+
+    try {
+      await prisma.$transaction(
+        async (tx) => {
+          await consumeOrderStock(
+            tx,
+            activeOrderIds,
+            stockLocation.id
+          );
+
+          throw new Error(
+            "__STOCK_PREFLIGHT_ROLLBACK__"
+          );
+        }
+      );
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message ===
+          "__STOCK_PREFLIGHT_ROLLBACK__"
+      ) {
+        // Beklenen rollback.
+        // Stokta gerçek değişiklik bırakılmaz.
+      } else {
+        console.error(
+          "STOCK PREFLIGHT ERROR:",
+          error
+        );
+
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              error instanceof Error
+                ? error.message
+                : "Stok kontrolü başarısız.",
+          },
+          {
+            status: 400,
+          }
+        );
+      }
+    }
 
     // ============================================================
     // KART ÖDEMESİ
     //
-    // BURADA YENİ POS PAYMENT ENGINE DEVREYE GİRER.
-    //
-    // POS BAŞARILI OLMADAN:
-    //
-    // Order = PAID
-    // Table = EMPTY
-    //
-    // YAPILMAZ.
+    // POS sadece kart ödemesinde devreye girer.
     // ============================================================
 
     if (paymentType === "CARD") {
-
       const idempotencyKey =
         `order-${order.tableId}-${Date.now()}-${crypto.randomUUID()}`;
 
-
-
       const paymentResult =
         await createPayment({
-
-          orderId:
-            order.id,
-
-          amount:
-            total,
-
-          method:
-            "CARD",
-
-          idempotencyKey
-
+          orderId: order.id,
+          amount: total,
+          method: "CARD",
+          idempotencyKey,
         });
 
-
-
-      // ========================================================
+      // ==========================================================
       // POS BAŞARISIZ
       //
       // Hiçbir Order kapanmaz.
       // Masa kapanmaz.
-      // ========================================================
+      // Stok değişmez.
+      // ==========================================================
 
       if (!paymentResult.success) {
-
         return NextResponse.json(
           {
             success: false,
@@ -267,101 +270,86 @@ export async function PATCH(
               paymentResult.status,
 
             errorCode:
-              paymentResult.errorCode ?? null
-
+              paymentResult.errorCode ??
+              null,
           },
           {
-            status: 402
+            status: 402,
           }
         );
-
       }
-
     }
 
-
-
     // ============================================================
-    // ÖDEME ZAMANI
+    // ÖDEME BAŞARILI
     // ============================================================
 
-    const paidAt =
-      new Date();
-
-
+    const paidAt = new Date();
 
     // ============================================================
-    // AKTİF SİPARİŞLERİ ÖDENMİŞ OLARAK KAPAT
+    // GERÇEK KAPATMA + STOK TÜKETİMİ
     //
-    // CASH:
-    // Mevcut sistem aynen devam eder.
+    // Hepsi TEK transaction.
     //
-    // CARD:
-    // Sadece POS başarılı olduktan sonra buraya gelir.
+    // Bir işlem başarısız olursa:
+    //
+    // Order PAID olmaz
+    // stok düşmez
+    // masa EMPTY olmaz
+    //
+    // transaction rollback olur.
     // ============================================================
 
-    await prisma.order.updateMany({
+    await prisma.$transaction(
+      async (tx) => {
+        // --------------------------------------------------------
+        // 1. STOK TÜKETİMİ
+        // --------------------------------------------------------
 
-      where: {
+        await consumeOrderStock(
+          tx,
+          activeOrderIds,
+          stockLocation.id
+        );
 
-        tableId:
-          order.tableId,
+        // --------------------------------------------------------
+        // 2. SİPARİŞLERİ PAID YAP
+        // --------------------------------------------------------
 
-        status: {
+        await tx.order.updateMany({
+          where: {
+            id: {
+              in: activeOrderIds,
+            },
+            status: {
+              in: [
+                "OPEN",
+                "PREPARING",
+                "READY",
+              ],
+            },
+          },
+          data: {
+            status: "PAID",
+            paymentType,
+            paidAt,
+          },
+        });
 
-          in: [
+        // --------------------------------------------------------
+        // 3. MASAYI BOŞALT
+        // --------------------------------------------------------
 
-            "OPEN",
-
-            "PREPARING",
-
-            "READY"
-
-          ]
-
-        }
-
-      },
-
-      data: {
-
-        status: "PAID",
-
-        paymentType,
-
-        paidAt
-
+        await tx.table.update({
+          where: {
+            id: order.tableId,
+          },
+          data: {
+            status: TableStatus.EMPTY,
+          },
+        });
       }
-
-    });
-
-
-
-    // ============================================================
-    // MASAYI BOŞALT
-    //
-    // Masanın artık aktif siparişi kalmadı.
-    // ============================================================
-
-    await prisma.table.update({
-
-      where: {
-
-        id:
-          order.tableId
-
-      },
-
-      data: {
-
-        status:
-          TableStatus.EMPTY
-
-      }
-
-    });
-
-
+    );
 
     // ============================================================
     // KAPATILAN SİPARİŞLERİ GERİ AL
@@ -369,46 +357,23 @@ export async function PATCH(
 
     const paidOrders =
       await prisma.order.findMany({
-
         where: {
-
           id: {
-
-            in:
-              activeOrders.map(
-                item =>
-                  item.id
-              )
-
-          }
-
+            in: activeOrderIds,
+          },
         },
-
         include: {
-
           table: true,
-
           items: {
-
             include: {
-
-              product: true
-
-            }
-
-          }
-
+              product: true,
+            },
+          },
         },
-
         orderBy: {
-
-          createdAt: "asc"
-
-        }
-
+          createdAt: "asc",
+        },
       });
-
-
 
     // ============================================================
     // TOPLAM KAPATILAN TUTAR
@@ -416,31 +381,23 @@ export async function PATCH(
 
     const paidTotal =
       paidOrders.reduce(
-
         (
           sum,
           paidOrder
         ) => {
-
           return (
             sum +
             paidOrder.total
           );
-
         },
-
         0
-
       );
 
-
-
     // ============================================================
-    // BAŞARILI ÖDEME
+    // BAŞARILI ÖDEME CEVABI
     // ============================================================
 
     return NextResponse.json({
-
       success: true,
 
       paymentType,
@@ -451,7 +408,11 @@ export async function PATCH(
         order.tableId,
 
       table:
-        order.table,
+        {
+          ...order.table,
+          status:
+            TableStatus.EMPTY,
+        },
 
       total:
         paidTotal,
@@ -459,29 +420,25 @@ export async function PATCH(
       paidOrderCount:
         paidOrders.length,
 
-      paidOrders
-
+      paidOrders,
     });
-
   } catch (error) {
-
     console.error(
       "PAYMENT ERROR:",
       error
     );
 
-
-
     return NextResponse.json(
       {
+        success: false,
         error:
-          "Ödeme işlemi başarısız"
+          error instanceof Error
+            ? error.message
+            : "Ödeme işlemi başarısız",
       },
       {
-        status: 500
+        status: 500,
       }
     );
-
   }
-
 }

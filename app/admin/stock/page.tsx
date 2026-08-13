@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { prisma } from "@/app/lib/prisma";
 
 function formatNumber(value: number) {
@@ -172,7 +172,7 @@ export default async function StockPage() {
     <main className="space-y-6">
 
       {/* =====================================================
-          ÜST BAŞLIK
+          ï¿½SST BAÅLIK
       ====================================================== */}
 
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -228,9 +228,23 @@ export default async function StockPage() {
               transition
             "
           >
-            + Stok Girişi
+            + Stok Giriï¿½xi
           </Link>
 
+          <Link
+            href="/admin/stock/exit"
+            className="
+              border border-red-200
+              bg-red-50
+              text-red-700
+              px-4 py-2
+              rounded-lg
+              hover:bg-red-100
+              transition
+            "
+          >
+             Stok Çıkışı
+          </Link>
           <Link
             href="/admin/stock/count"
             className="
@@ -251,7 +265,7 @@ export default async function StockPage() {
 
 
       {/* =====================================================
-          ÖZET KARTLARI
+          ï¿½ZET KARTLARI
       ====================================================== */}
 
       <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-5">
@@ -685,7 +699,7 @@ export default async function StockPage() {
             href="/admin/stock/ingredients"
             className="text-sm text-blue-600 hover:underline"
           >
-            Tümünü Yönet →
+            Tümünü Yönet → 
           </Link>
 
         </div>
@@ -1007,3 +1021,5 @@ export default async function StockPage() {
     </main>
   );
 }
+
+
